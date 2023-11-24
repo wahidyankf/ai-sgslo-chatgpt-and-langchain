@@ -1,53 +1,34 @@
-from langchain.llms import OpenAI
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain, SequentialChain
-import argparse
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import LLMChain
+from langchain.prompts import MessagesPlaceholder, HumanMessagePromptTemplate, ChatPromptTemplate
+from langchain.memory import ConversationBufferMemory, FileChatMessageHistory
 from dotenv import load_dotenv
 
 load_dotenv()
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--task", default="Return a list of numbers")
-parser.add_argument("--language", default="python")
-args = parser.parse_args()
-
-llm = OpenAI()
-
-code_prompt = PromptTemplate(
-    template="Write a very short {language} function that will {task}",
-    input_variables=["language", "task"],
+chat = ChatOpenAI()
+memory = ConversationBufferMemory(
+    chat_memory=FileChatMessageHistory("messages.json"),
+    memory_key="messages",
+    return_messages=True,
 )
-test_prompt = PromptTemplate(
-    input_variables=["language", "code"],
-    template="Write a test for the following {language} code:\n{code}"
+prompt = ChatPromptTemplate(
+    input_variables=["content", "messages"],
+    messages=[
+        MessagesPlaceholder(variable_name="messages"),
+        HumanMessagePromptTemplate.from_template("{content}")
+    ]
 )
 
-code_chain = LLMChain(
-    llm=llm,
-    prompt=code_prompt,
-    output_key="code"
-)
-test_chain = LLMChain(
-    llm=llm,
-    prompt=test_prompt,
-    output_key="test"
+chain = LLMChain(
+    llm=chat,
+    prompt=prompt,
+    memory=memory
 )
 
-chain = SequentialChain(
-    chains=[code_chain, test_chain],
-    input_variables=["task", "language"],
-    output_variables=["test", "code"]
-)
+while True:
+    content = input(">> ")
 
-result = chain({
-    "language": args.language,
-    "task": args.task
-})
+    result = chain({"content": content})
 
-print(">>>>> GENERATED CODE:")
-print(result["code"])
-print("\n")
-
-print(">>>>> GENERATED TEST:")
-print(result["test"])
-print("\n")
+    print(result["text"])
