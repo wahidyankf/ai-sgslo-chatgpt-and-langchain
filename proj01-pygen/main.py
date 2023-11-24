@@ -46,6 +46,8 @@ result = chain({
 
 print(">>>>> GENERATED CODE:")
 print(result["code"])
+print("\n")
 
 print(">>>>> GENERATED TEST:")
 print(result["test"])
+print("\n")
